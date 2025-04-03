@@ -1,0 +1,147 @@
+import json
+import os
+
+# Имя файла для хранения задач
+TASKS_FILE = "tasks.json"
+
+def load_tasks():
+    """Загружает задачи из файла JSON."""
+    if not os.path.exists(TASKS_FILE):
+        return []  # Возвращаем пустой список, если файл не существует
+    try:
+        with open(TASKS_FILE, 'r', encoding='utf-8') as f:
+            tasks = json.load(f)
+            # Убедимся, что каждый элемент - это словарь с нужными ключами
+            # (на случай повреждения файла или старого формата)
+            valid_tasks = []
+            for task in tasks:
+                if isinstance(task, dict) and 'description' in task and 'completed' in task:
+                    valid_tasks.append(task)
+                elif isinstance(task, str): # Обработка старого формата (просто строки)
+                     valid_tasks.append({'description': task, 'completed': False})
+            return valid_tasks
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Ошибка при загрузке задач: {e}. Начинаем с пустого списка.")
+        return []
+
+def save_tasks(tasks):
+    """Сохраняет задачи в файл JSON."""
+    try:
+        with open(TASKS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(tasks, f, indent=4, ensure_ascii=False)
+    except IOError as e:
+        print(f"Ошибка при сохранении задач: {e}")
+
+def display_menu():
+    """Отображает меню опций."""
+    print("\n--- Меню To-Do ---")
+    print("1. Показать задачи")
+    print("2. Добавить задачу")
+    print("3. Отметить задачу как выполненную")
+    print("4. Удалить задачу")
+    print("5. Выйти")
+    print("------------------")
+
+def show_tasks(tasks):
+    """Отображает список задач."""
+    print("\n--- Список задач ---")
+    if not tasks:
+        print("Список задач пуст.")
+    else:
+        for i, task in enumerate(tasks):
+            status = "[X]" if task['completed'] else "[ ]"
+            print(f"{i + 1}. {status} {task['description']}")
+    print("--------------------")
+
+def add_task(tasks):
+    """Добавляет новую задачу в список."""
+    description = input("Введите описание новой задачи: ")
+    if description:
+        tasks.append({'description': description, 'completed': False})
+        print(f"Задача '{description}' добавлена.")
+        save_tasks(tasks) # Сохраняем сразу после добавления
+    else:
+        print("Описание задачи не может быть пустым.")
+
+def mark_task_complete(tasks):
+    """Отмечает задачу как выполненную."""
+    show_tasks(tasks)
+    if not tasks:
+        return
+
+    while True:
+        try:
+            task_num_str = input("Введите номер задачи для отметки как выполненной (или 0 для отмены): ")
+            task_num = int(task_num_str)
+            if task_num == 0:
+                return # Отмена
+            if 1 <= task_num <= len(tasks):
+                if tasks[task_num - 1]['completed']:
+                     print(f"Задача '{tasks[task_num - 1]['description']}' уже была выполнена.")
+                else:
+                    tasks[task_num - 1]['completed'] = True
+                    print(f"Задача '{tasks[task_num - 1]['description']}' отмечена как выполненная.")
+                    save_tasks(tasks) # Сохраняем изменения
+                break # Выход из цикла ввода
+            else:
+                print("Неверный номер задачи.")
+        except ValueError:
+            print("Пожалуйста, введите число.")
+        except IndexError:
+             print("Неверный номер задачи (IndexError - такого индекса нет).")
+
+
+def remove_task(tasks):
+    """Удаляет задачу из списка."""
+    show_tasks(tasks)
+    if not tasks:
+        return
+
+    while True:
+        try:
+            task_num_str = input("Введите номер задачи для удаления (или 0 для отмены): ")
+            task_num = int(task_num_str)
+
+            if task_num == 0:
+                return # Отмена
+
+            if 1 <= task_num <= len(tasks):
+                removed_task = tasks.pop(task_num - 1) # Удаляем и получаем элемент
+                print(f"Задача '{removed_task['description']}' удалена.")
+                save_tasks(tasks) # Сохраняем изменения
+                break # Выход из цикла ввода
+            else:
+                print("Неверный номер задачи.")
+        except ValueError:
+            print("Пожалуйста, введите число.")
+        except IndexError:
+             print("Неверный номер задачи (IndexError - такого индекса нет).")
+
+
+def main():
+    """Основная функция приложения."""
+    tasks = load_tasks()
+
+    while True:
+        display_menu()
+        choice = input("Выберите опцию: ")
+
+        if choice == '1':
+            show_tasks(tasks)
+        elif choice == '2':
+            add_task(tasks)
+        elif choice == '3':
+            mark_task_complete(tasks)
+        elif choice == '4':
+            remove_task(tasks)
+        elif choice == '5':
+            print("Сохранение задач и выход...")
+            save_tasks(tasks) # Убедимся что все сохранено перед выходом
+            print("До свидания!")
+            break
+        else:
+            print("Неверный выбор. Пожалуйста, попробуйте снова.")
+
+# Запуск приложения
+if __name__ == "__main__":
+    main()
